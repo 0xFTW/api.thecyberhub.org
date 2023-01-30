@@ -1,4 +1,5 @@
 const express = require('express')
+
 const colors = require('colors')
 const dotenv = require('dotenv').config()
 const {errorHandler} = require('./middleware/errorMiddleware')
@@ -7,11 +8,10 @@ const path = require('path')
 const port = process.env.PORT || 5000
 const cors = require('cors');
 
+
 connectDB()
 
 const app = express()
-
-// app.use(cors({ origin: '*' }));
 
 // Allow requests from multiple origins
 const allowedOrigins = [
@@ -21,25 +21,11 @@ const allowedOrigins = [
     'http://localhost:3000',
 ];
 app.use(cors({ origin: allowedOrigins }));
-
-
-app.use("/images", express.static(path.join(__dirname, "/images")));
-
-const mongoose = require('mongoose');
-
-const imageSchema = new mongoose.Schema({
-    name: String,
-    data: Buffer,
-});
-
-const Image = mongoose.model('Image', imageSchema);
-
+const AWS = require('aws-sdk');
+const fs = require('fs');
 const multer = require('multer');
 
 const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, 'api/images');
-    },
     filename: (req, file, cb) => {
         cb(null, file.originalname);
     },
@@ -47,18 +33,39 @@ const storage = multer.diskStorage({
 
 const upload = multer({storage});
 
+
 app.post('/api/upload', upload.single('file'), async (req, res) => {
-    // req.file contains the uploaded file
-    const image = new Image({
-        name: req.file.originalname,
-        data: req.file.buffer,
+  console.log(req.body.key)
+    AWS.config.update({
+        endpoint: process.env.SPACES_ENDPOINT,
+        region: "nyc3",
+        credentials: {
+            accessKeyId: process.env.SPACES_KEY,
+            secretAccessKey: process.env.SPACES_SECRET,
+        },
     });
-    await image.save();
 
-    res.send('File uploaded successfully');
+    const s3Client = new AWS.S3({});
+
+    const fileName = req.body.key;
+    const file = fs.createReadStream(req.file.path);
+
+    s3Client.putObject({
+        Bucket: 'thecyberhub',
+        Key: fileName,
+        Body: file,
+        ACL: "public-read"
+    }, (err, data) => {
+        if (err) {
+          res.sendStatus(500)
+          console.error(err)
+        }
+        else {
+          res.sendStatus(201)
+          console.log(`File uploaded successfully`);
+      }
+    });
 });
-// ----------------------------------------------------------------
-
 
 app.use(express.json())
 app.use(express.urlencoded({extended: false}))
@@ -83,15 +90,6 @@ if (process.env.NODE_ENV === 'production') {
       </body>
     </html>
   `))
-// app.use(express.static(path.join(__dirname,'../web/dist')))
-    // app.get('*', (req,res)=> {
-    //     res.sendFile(path.resolve(__dirname,'..','web','dist','index.html'))
-    // })
-
-    // app.use(express.static(path.join(__dirname,'./dist')))
-    // app.get('*', (req,res)=> {
-    //     res.sendFile(path.resolve(__dirname,'dist','index.html'))
-    // })
 } else {
     app.get('/', (req, res) => res.send('Please set to production'))
 }

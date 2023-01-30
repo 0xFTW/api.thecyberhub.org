@@ -1,5 +1,4 @@
 const express = require('express')
-
 const colors = require('colors')
 const dotenv = require('dotenv').config()
 const {errorHandler} = require('./middleware/errorMiddleware')
@@ -8,19 +7,18 @@ const path = require('path')
 const port = process.env.PORT || 5000
 const cors = require('cors');
 
-
 connectDB()
 
 const app = express()
 
-// Allow requests from multiple origins
 const allowedOrigins = [
     'https://thecyberhub.org',
     'https://beta.thecyberhub.org',
     'https://dev.thecyberhub.org',
     'http://localhost:3000',
 ];
-app.use(cors({ origin: allowedOrigins }));
+app.use(cors({origin: allowedOrigins}));
+
 const AWS = require('aws-sdk');
 const fs = require('fs');
 const multer = require('multer');
@@ -33,9 +31,7 @@ const storage = multer.diskStorage({
 
 const upload = multer({storage});
 
-
 app.post('/api/upload', upload.single('file'), async (req, res) => {
-  console.log(req.body.key)
     AWS.config.update({
         endpoint: process.env.SPACES_ENDPOINT,
         region: "nyc3",
@@ -44,7 +40,6 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
             secretAccessKey: process.env.SPACES_SECRET,
         },
     });
-
     const s3Client = new AWS.S3({});
 
     const fileName = req.body.key;
@@ -57,13 +52,12 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
         ACL: "public-read"
     }, (err, data) => {
         if (err) {
-          res.sendStatus(500)
-          console.error(err)
+            res.sendStatus(500)
+            console.error(err)
+        } else {
+            res.sendStatus(201)
+            console.log(`File uploaded successfully`);
         }
-        else {
-          res.sendStatus(201)
-          console.log(`File uploaded successfully`);
-      }
     });
 });
 

@@ -14,6 +14,9 @@ const app = express()
 const allowedOrigins = require('./config/allowedOrigins');
 app.use(cors({ origin: allowedOrigins }));
 
+app.use(express.json())
+app.use(express.urlencoded({extended: false}))
+
 app.use('/api/users', require('./routes/userRoutes'))
 app.use('/api/userDetails', require('./routes/userDetailRoutes'))
 app.use('/api/blogs', require('./routes/blogRoutes'))
